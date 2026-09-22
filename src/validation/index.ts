@@ -8,6 +8,16 @@
 export { validate } from './validate.ts';
 export type { ValidationOptions } from './validate.ts';
 
+export { analyzeQueryCost } from './analyzeQueryCost.ts';
+export type {
+  FieldCostConfig,
+  ListCostConfig,
+  QueryCostConfig,
+  QueryCostErrorResult,
+  QueryCostNode,
+  QueryCostResult,
+} from './analyzeQueryCost.ts';
+
 export { ValidationContext } from './ValidationContext.ts';
 export type { ValidationRule } from './ValidationContext.ts';
 
