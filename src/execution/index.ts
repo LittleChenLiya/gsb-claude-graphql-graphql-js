@@ -75,3 +75,14 @@ export {
   getDirectiveValues,
 } from './values.ts';
 export type { VariableValues } from './values.ts';
+
+export { estimateQueryCost } from './queryCost.ts';
+export type {
+  QueryCostArgs,
+  QueryCostConfig,
+  QueryCostDiagnostic,
+  QueryCostEstimate,
+  QueryCostListConfig,
+  QueryCostNode,
+  QueryCostResult,
+} from './queryCost.ts';
