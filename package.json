@@ -32,6 +32,7 @@
     "node:test": "node --experimental-strip-types --throw-deprecation --test --experimental-test-isolation=none --test-concurrency=1 --test-reporter=spec",
     "fuzzonly": "npm run node:test -- \"src/**/__tests__/**/*-fuzz.ts\"",
     "changelog": "node --experimental-strip-types resources/gen-changelog.ts",
+    "example:schema-upgrade": "node --experimental-strip-types resources/check-schema-upgrade-example.ts",
     "release:prepare": "node --experimental-strip-types resources/release-prepare.ts",
     "release:metadata": "node --experimental-strip-types resources/release-metadata.ts",
     "benchmark": "node --experimental-strip-types resources/benchmark.ts",

@@ -8,6 +8,14 @@
 export { validate } from './validate.ts';
 export type { ValidationOptions } from './validate.ts';
 
+export { checkSchemaUpgrade } from './checkSchemaUpgrade.ts';
+export type {
+  NamedOperationDocument,
+  SchemaUpgradeDiagnostic,
+  SchemaUpgradeOptions,
+  SchemaUpgradeReport,
+} from './checkSchemaUpgrade.ts';
+
 export { ValidationContext } from './ValidationContext.ts';
 export type { ValidationRule } from './ValidationContext.ts';
 

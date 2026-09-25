@@ -430,6 +430,7 @@ export type {
 // Validate GraphQL documents.
 export {
   validate,
+  checkSchemaUpgrade,
   ValidationContext,
   // All validation rules in the GraphQL Specification.
   specifiedRules,
@@ -481,7 +482,14 @@ export {
   NoSchemaIntrospectionCustomRule,
 } from './validation/index.ts';
 
-export type { ValidationOptions, ValidationRule } from './validation/index.ts';
+export type {
+  NamedOperationDocument,
+  SchemaUpgradeDiagnostic,
+  SchemaUpgradeOptions,
+  SchemaUpgradeReport,
+  ValidationOptions,
+  ValidationRule,
+} from './validation/index.ts';
 
 // Create, format, and print GraphQL errors.
 export { GraphQLError, syntaxError, locatedError } from './error/index.ts';
