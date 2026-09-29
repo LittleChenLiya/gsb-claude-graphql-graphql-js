@@ -512,6 +512,8 @@ export {
   extendSchema,
   // Sort a GraphQLSchema.
   lexicographicSortSchema,
+  // Prune a GraphQLSchema down to a selected set of root operation fields.
+  pruneSchema,
   // Print a GraphQLSchema to GraphQL Schema language.
   printSchema,
   // Print a GraphQLType to GraphQL Schema language.
@@ -598,6 +600,7 @@ export type {
   IntrospectionEnumValue,
   IntrospectionDirective,
   BuildSchemaOptions,
+  PruneSchemaOptions,
   BreakingChange,
   SafeChange,
   DangerousChange,

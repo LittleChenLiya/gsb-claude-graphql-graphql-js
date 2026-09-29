@@ -53,6 +53,10 @@ export { extendSchema } from './extendSchema.ts';
 // Sort a GraphQLSchema.
 export { lexicographicSortSchema } from './lexicographicSortSchema.ts';
 
+// Prune a GraphQLSchema down to a selected set of root operation fields.
+export { pruneSchema } from './pruneSchema.ts';
+export type { PruneSchemaOptions } from './pruneSchema.ts';
+
 // Print a GraphQLSchema to GraphQL Schema language.
 export {
   printSchema,
