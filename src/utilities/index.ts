@@ -37,6 +37,16 @@ export type {
 // Gets the target Operation from a Document.
 export { getOperationAST } from './getOperationAST.ts';
 
+// Collects variable usages of a single operation without executing it.
+export { collectVariableUsages } from './collectVariableUsages.ts';
+export type {
+  VariableArgumentUsage,
+  VariableDefinitionInfo,
+  VariableDirectiveUsage,
+  VariableUsageLocation,
+  VariableUsagesReport,
+} from './collectVariableUsages.ts';
+
 // Convert a GraphQLSchema to an IntrospectionQuery.
 export { introspectionFromSchema } from './introspectionFromSchema.ts';
 

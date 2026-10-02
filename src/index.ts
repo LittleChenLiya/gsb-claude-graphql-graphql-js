@@ -500,6 +500,8 @@ export {
   getIntrospectionQuery,
   // Gets the target Operation from a Document.
   getOperationAST,
+  // Collects variable usages of a single operation without executing it.
+  collectVariableUsages,
   // Convert a GraphQLSchema to an IntrospectionQuery.
   introspectionFromSchema,
   // Build a GraphQLSchema from an introspection result.
@@ -603,5 +605,10 @@ export type {
   DangerousChange,
   SchemaChange,
   TypedQueryDocumentNode,
+  VariableArgumentUsage,
+  VariableDefinitionInfo,
+  VariableDirectiveUsage,
+  VariableUsageLocation,
+  VariableUsagesReport,
   ResolvedSchemaElement,
 } from './utilities/index.ts';
