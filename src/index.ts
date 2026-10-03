@@ -555,6 +555,8 @@ export {
   validateInputLiteral,
   // Concatenates multiple AST together.
   concatAST,
+  // Safely merges multiple AST together, checking colliding names.
+  mergeDocuments,
   // Separates an AST into an AST per Operation.
   separateOperations,
   // Strips characters that are not significant to the validity or execution of a GraphQL document.

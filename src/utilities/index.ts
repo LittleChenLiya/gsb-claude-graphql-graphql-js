@@ -113,6 +113,9 @@ export {
 // Concatenates multiple AST together.
 export { concatAST } from './concatAST.ts';
 
+// Safely merges multiple AST together, checking colliding names.
+export { mergeDocuments } from './mergeDocuments.ts';
+
 // Separates an AST into an AST per Operation.
 export { separateOperations } from './separateOperations.ts';
 
