@@ -151,3 +151,14 @@ export {
   resolveASTSchemaCoordinate,
 } from './resolveSchemaCoordinate.ts';
 export type { ResolvedSchemaElement } from './resolveSchemaCoordinate.ts';
+
+// Audits default values for conversion to valid literals.
+export {
+  AuditDefaultValueIssueType,
+  auditDefaultValues,
+} from './auditDefaultValues.ts';
+export type {
+  AuditDefaultValueIssue,
+  AuditDefaultValuesOptions,
+  AuditScalarDefaultValueAdapter,
+} from './auditDefaultValues.ts';

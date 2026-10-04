@@ -1,0 +1,178 @@
+---
+title: Auditing Default Values
+sidebarTitle: Auditing Default Values
+---
+
+import { Callout } from 'nextra/components';
+
+# Auditing Default Values
+
+<Callout type="info">
+  Default value auditing is available in GraphQL.js v17 and newer.
+</Callout>
+
+Input fields and arguments can declare default values. A default value that
+cannot be converted to a valid GraphQL literal for its type will cause
+unexpected behavior at runtime. The `auditDefaultValues()` utility checks every
+default value in a schema in a read-only way and reports each problem with its
+complete type/field path and the reason it is invalid.
+
+## Auditing a schema
+
+Call `auditDefaultValues()` with a schema built from SDL or code. Each issue
+includes the problem `type`, the complete `path` from the schema element to the
+offending value, and a human-readable `message`:
+
+```js
+import { buildSchema, auditDefaultValues } from 'graphql';
+
+const schema = buildSchema(`
+  input ReviewInput {
+    stars: Int = "bad"
+  }
+
+  type Query {
+    review(input: ReviewInput): String
+  }
+`);
+
+const issues = auditDefaultValues(schema);
+
+for (const issue of issues) {
+  console.log(issue.type, issue.path, issue.message);
+}
+// INVALID [ 'ReviewInput', 'stars' ] ReviewInput.stars: Expected value of type "Int", found: "bad".
+```
+
+The audit covers values nested within input objects, lists, enums, and
+non-null types. List indices and field names are appended to the path so the
+exact location of a problem is clear:
+
+```js
+const schema = buildSchema(`
+  input ReviewInput {
+    tags: [String] = ["ok", 42, "fine"]
+  }
+
+  type Query {
+    review(input: ReviewInput): String
+  }
+`);
+
+const issues = auditDefaultValues(schema);
+// [
+//   {
+//     type: 'INVALID',
+//     path: ['ReviewInput', 'tags', 1],
+//     message: 'ReviewInput.tags[1]: Expected value of type "String", found: 42.'
+//   }
+// ]
+```
+
+## Custom scalars
+
+Custom scalar types can represent any literal shape, so the audit cannot know
+how to validate their default values on its own. By default, a custom scalar
+without an adapter is reported as `UNKNOWN_SCALAR` and its `serialize` and
+`coerce*` methods are never invoked:
+
+```js
+const issues = auditDefaultValues(schema);
+// [
+//   {
+//     type: 'UNKNOWN_SCALAR',
+//     path: ['Query', 'review', 'at'],
+//     message: 'Query.review.at: Cannot audit default value of custom scalar "DateTime" without an adapter; provide a scalar adapter to audit this value.'
+//   }
+// ]
+```
+
+Provide an adapter for each custom scalar you want to audit. The adapter
+receives the external runtime value and returns a GraphQL literal node when the
+value is valid, or `undefined` when it is not:
+
+```js
+import { Kind } from 'graphql';
+
+const issues = auditDefaultValues(schema, {
+  scalarAdapters: {
+    DateTime: (value) => {
+      if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+        return { kind: Kind.STRING, value, block: false };
+      }
+      return undefined;
+    },
+  },
+});
+```
+
+Use the `onScalarAudit` callback to observe how many custom scalar defaults
+were audited. It is invoked once for each adapter call, so with no adapters
+provided it is never called:
+
+```js
+let audited = 0;
+auditDefaultValues(schema, {
+  onScalarAudit: (scalar) => {
+    audited++;
+  },
+});
+// audited === 0 when no scalar adapters are provided
+```
+
+## Recursive input objects
+
+Input object types can be recursive. The audit expands recursive types in step
+with the actual default value, using a type stack to avoid infinite expansion
+on cyclic values. Only values that actually appear in the default are checked,
+so a recursive type is not treated as having a bad value at every level:
+
+```js
+const NodeInput = new GraphQLInputObjectType({
+  name: 'NodeInput',
+  fields: () => ({
+    value: { type: GraphQLInt },
+    children: { type: new GraphQLList(NodeInput) },
+  }),
+});
+
+const schema = new GraphQLSchema({
+  query: new GraphQLObjectType({
+    name: 'Query',
+    fields: {
+      tree: {
+        type: GraphQLString,
+        args: {
+          root: {
+            type: NodeInput,
+            defaultValue: {
+              value: 1,
+              children: [{ value: 2, children: [{ value: 'bad' }] }],
+            },
+          },
+        },
+      },
+    },
+  }),
+});
+
+const issues = auditDefaultValues(schema);
+// Only the actual bad value is reported:
+// Query.tree.root.children[0].children[0].value: Expected value of type "Int", found: "bad".
+```
+
+The audit is read-only: it never modifies the schema, its default values, or
+the existing `astFromValue()` interface.
+
+## Running the audit from the command line
+
+The audit is also available as a repeatable command that checks one or more
+schema files and exits with code `1` when problems are found:
+
+```sh
+npm run audit:defaults -- schema.graphql
+```
+
+The command prints each problem with its type, full path, and reason, and
+exits with code `0` when no problems are found, making it suitable for
+continuous integration checks.

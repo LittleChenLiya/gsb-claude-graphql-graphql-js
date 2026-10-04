@@ -69,6 +69,7 @@ const meta = {
   'testing-operations': '',
   'testing-resolvers': '',
   'testing-best-practices': '',
+  'audit-default-values': '',
   '-- 7': {
     type: 'separator',
     title: 'Production & Scaling',

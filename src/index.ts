@@ -572,6 +572,9 @@ export {
   findSchemaChanges,
   resolveSchemaCoordinate,
   resolveASTSchemaCoordinate,
+  // Audits default values for conversion to valid literals.
+  AuditDefaultValueIssueType,
+  auditDefaultValues,
 } from './utilities/index.ts';
 
 export type {
@@ -604,4 +607,7 @@ export type {
   SchemaChange,
   TypedQueryDocumentNode,
   ResolvedSchemaElement,
+  AuditDefaultValueIssue,
+  AuditDefaultValuesOptions,
+  AuditScalarDefaultValueAdapter,
 } from './utilities/index.ts';
