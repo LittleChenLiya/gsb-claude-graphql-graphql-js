@@ -745,6 +745,7 @@ export function validateExecutionArgs(
     enableEarlyExecution,
     hooks,
     options,
+    nullBubblingDiagnostics,
   } = args;
 
   // If the schema used for execution is invalid, throw an error.
@@ -866,6 +867,7 @@ export function validateExecutionArgs(
     errorPropagation,
     externalAbortSignal: externalAbortSignal ?? undefined,
     enableEarlyExecution: enableEarlyExecution === true,
+    nullBubblingDiagnostics: nullBubblingDiagnostics === true,
     hooks: hooks ?? undefined,
     rawVariableValues,
   };

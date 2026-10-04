@@ -71,6 +71,11 @@ import type { ValidatedExecutionArgs } from './ExecutionArgs.ts';
 import type { StreamUsage } from './getStreamUsage.ts';
 import { getStreamUsage as _getStreamUsage } from './getStreamUsage.ts';
 import { runAsyncWorkFinishedHook } from './hooks.ts';
+import type { NullBubblingChain } from './nullBubblingDiagnostics.ts';
+import {
+  getNullBubblingChain,
+  setNullBubblingChain,
+} from './nullBubblingDiagnostics.ts';
 import { returnIteratorCatchingErrors } from './returnIteratorCatchingErrors.ts';
 import { getArgumentValues } from './values.ts';
 
@@ -220,6 +225,7 @@ export class Executor<
   abortReason: unknown;
   sharedExecutionContext: SharedExecutionContext;
   collectedErrors: CollectedErrors;
+  nullBubblingChains: Array<NullBubblingChain>;
   abortResultPromise: (() => void) | undefined;
   resolverAbortController: AbortController | undefined;
   getAbortSignal: () => AbortSignal | undefined;
@@ -236,6 +242,7 @@ export class Executor<
     this.aborted = false;
     this.abortReason = defaultAbortReason;
     this.collectedErrors = new CollectedErrors();
+    this.nullBubblingChains = [];
 
     if (sharedExecutionContext === undefined) {
       this.resolverAbortController = new AbortController();
@@ -349,7 +356,9 @@ export class Executor<
           },
           (error: unknown) => {
             maybeRemoveExternalAbortListener();
-            this.collectedErrors.add(ensureGraphQLError(error), undefined);
+            const graphQLError = ensureGraphQLError(error);
+            this.recordNullBubblingAtRoot(graphQLError);
+            this.collectedErrors.add(graphQLError, undefined);
             return this.buildResponse(null);
           },
         );
@@ -367,7 +376,9 @@ export class Executor<
       maybeRemoveExternalAbortListener();
     } catch (error) {
       maybeRemoveExternalAbortListener();
-      this.collectedErrors.add(ensureGraphQLError(error), undefined);
+      const graphQLError = ensureGraphQLError(error);
+      this.recordNullBubblingAtRoot(graphQLError);
+      this.collectedErrors.add(graphQLError, undefined);
       return this.finish(this.buildResponse(null));
     }
     return this.finish(this.buildResponse(result));
@@ -420,6 +431,24 @@ export class Executor<
   }
 
   /**
+   * Records the root position of a null-bubbling chain when a non-null field
+   * failure propagates all the way to the top level, nulling the entire data
+   * payload.
+   *
+   * @internal
+   */
+  recordNullBubblingAtRoot(error: GraphQLError): void {
+    if (!this.validatedExecutionArgs.nullBubblingDiagnostics) {
+      return;
+    }
+    const chain = getNullBubblingChain(error);
+    if (chain !== undefined) {
+      chain.push({ path: [], type: null });
+      this.nullBubblingChains.push(chain);
+    }
+  }
+
+  /**
    * Given a completed execution context and data, build the `{ errors, data }`
    * response defined by the "Response" section of the GraphQL specification.
    *
@@ -430,6 +459,15 @@ export class Executor<
   ): ExecutionResult | TAlternativeInitialResponse {
     this.getFinishSharedExecution()();
     const errors = this.collectedErrors.errors;
+    if (
+      this.validatedExecutionArgs.nullBubblingDiagnostics &&
+      this.nullBubblingChains.length > 0
+    ) {
+      const extensions = { nullBubbling: this.nullBubblingChains };
+      return errors.length
+        ? { errors, data, extensions }
+        : { data, extensions };
+    }
     return errors.length ? { errors, data } : { data };
   }
 
@@ -724,6 +762,29 @@ export class Executor<
       toNodes(fieldDetailsList),
       pathToArray(path),
     );
+
+    if (this.validatedExecutionArgs.nullBubblingDiagnostics) {
+      let chain = getNullBubblingChain(error);
+      if (chain === undefined && isNonNullType(returnType)) {
+        // A non-null field failed: start a new propagation chain. The chain
+        // travels with the error as it bubbles up through the completeValue
+        // chain; resolvers are never re-invoked.
+        chain = [];
+        setNullBubblingChain(error, chain);
+      }
+      if (chain !== undefined) {
+        chain.push({ path: pathToArray(path), type: String(returnType) });
+      }
+      if (
+        chain !== undefined &&
+        (!this.validatedExecutionArgs.errorPropagation ||
+          !isNonNullType(returnType))
+      ) {
+        // Reached the first nullable position (or error propagation is
+        // disabled): the null bubbling stops here.
+        this.nullBubblingChains.push(chain);
+      }
+    }
 
     // If the field type is non-nullable, then it is resolved without any
     // protection from errors, however it still properly locates the error.

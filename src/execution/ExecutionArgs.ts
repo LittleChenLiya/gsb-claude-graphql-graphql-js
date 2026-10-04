@@ -45,6 +45,13 @@ export interface ExecutionArgs {
   abortSignal?: Maybe<AbortSignal>;
   /** Whether incremental execution may begin eligible work early. */
   enableEarlyExecution?: Maybe<boolean>;
+  /**
+   * Whether to record an optional null-bubbling diagnostic. When enabled, the
+   * execution result includes an independent `extensions` entry describing
+   * which response positions were set to null because a non-nullable field
+   * failed. Resolvers are never re-invoked to explain a result.
+   */
+  nullBubblingDiagnostics?: Maybe<boolean>;
   /** Execution hooks invoked during this operation. */
   hooks?: Maybe<ExecutionHooks>;
   /** Additional execution options. */
@@ -100,6 +107,8 @@ export interface ValidatedExecutionArgs {
   externalAbortSignal: AbortSignal | undefined;
   /** Whether incremental execution may begin eligible work early. */
   enableEarlyExecution: boolean;
+  /** Whether to record the optional null-bubbling diagnostic. */
+  nullBubblingDiagnostics: boolean;
   /** Execution hooks supplied by the caller. */
   hooks: ExecutionHooks | undefined;
 }
