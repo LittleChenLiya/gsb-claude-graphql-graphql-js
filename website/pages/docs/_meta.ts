@@ -23,6 +23,7 @@ const meta = {
   nullability: '',
   'abstract-types': '',
   'custom-scalars': '',
+  'auditing-default-values': '',
   'constructing-types': '',
   'oneof-input-objects': '',
   'schema-coordinates': '',

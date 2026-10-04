@@ -553,6 +553,10 @@ export {
   validateInputValue,
   // Validate a GraphQL literal (AST) with a GraphQL type, collecting all errors.
   validateInputLiteral,
+  // Audit the default values of a schema without modifying it.
+  auditDefaultValues,
+  // Format an audit entry path as a readable string.
+  formatDefaultValueAuditPath,
   // Concatenates multiple AST together.
   concatAST,
   // Separates an AST into an AST per Operation.
@@ -575,6 +579,10 @@ export {
 } from './utilities/index.ts';
 
 export type {
+  DefaultValueAuditEntry,
+  DefaultValueAuditReport,
+  DefaultValueScalarAuditAdapter,
+  AuditDefaultValuesOptions,
   IntrospectionOptions,
   IntrospectionQuery,
   IntrospectionSchema,

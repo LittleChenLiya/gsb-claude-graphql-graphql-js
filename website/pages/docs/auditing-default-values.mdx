@@ -1,0 +1,72 @@
+---
+title: Auditing Default Values
+---
+
+# Auditing Default Values
+
+Schemas can declare default values for field arguments, directive arguments,
+and input object fields. A default value is only useful when it can be
+converted to a valid literal for its input type. The `auditDefaultValues`
+utility performs a read-only audit of every default value in a
+`GraphQLSchema` and reports the ones that cannot.
+
+```ts
+import { auditDefaultValues } from 'graphql';
+
+const report = auditDefaultValues(schema);
+
+for (const issue of report.issues) {
+  console.log(issue.path, issue.reason);
+}
+```
+
+The returned report contains:
+
+- `auditedCount`: the number of default values that were audited.
+- `issues`: default values that cannot be converted to a valid literal for
+  their input type. Each issue carries the full type/field `path` (including
+  nested input object field names and list indexes) and a human-readable
+  `reason`.
+- `unknowns`: default values of custom scalar types that could not be
+  audited because no audit adapter was provided.
+
+Nested input objects, lists, enums, and non-null types are all covered.
+Recursive input types are handled with a type stack, so cyclic default
+values are not infinitely expanded and issues are only reported for the
+default values actually present.
+
+## Custom scalars
+
+The audit never executes a custom scalar's `serialize` function. Custom
+scalar defaults are only checked through explicitly provided audit adapters,
+keyed by scalar type name. An adapter returns `true` to accept a default,
+`false` to reject it with a generic reason, or a string to reject it with a
+specific reason:
+
+```ts
+import { auditDefaultValues } from 'graphql';
+
+const report = auditDefaultValues(schema, {
+  scalarAdapters: {
+    DateTime: (value) =>
+      typeof value === 'string' && !Number.isNaN(Date.parse(value)),
+  },
+});
+```
+
+Without a matching adapter, a custom scalar default is reported in
+`unknowns` rather than `issues`.
+
+## Repeatable audit command
+
+The repository ships a small command-line entry point that audits a schema
+built from an SDL file and exits with a non-zero code when invalid defaults
+are found:
+
+```sh
+npm run audit:defaults -- path/to/schema.graphql
+```
+
+When no schema file is provided, a built-in example schema is audited. The
+audit does not modify the schema, its default values, or the behavior of
+`astFromValue`.

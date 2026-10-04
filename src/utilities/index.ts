@@ -110,6 +110,24 @@ export {
   validateInputLiteral,
 } from './validateInputValue.ts';
 
+export type {
+  // A single finding reported by auditDefaultValues.
+  DefaultValueAuditEntry,
+  // The report produced by auditDefaultValues.
+  DefaultValueAuditReport,
+  // An audit adapter for a custom scalar type.
+  DefaultValueScalarAuditAdapter,
+  // Options for auditDefaultValues.
+  AuditDefaultValuesOptions,
+} from './auditDefaultValues.ts';
+
+export {
+  // Audit the default values of a schema without modifying it.
+  auditDefaultValues,
+  // Format an audit entry path as a readable string.
+  formatDefaultValueAuditPath,
+} from './auditDefaultValues.ts';
+
 // Concatenates multiple AST together.
 export { concatAST } from './concatAST.ts';
 
