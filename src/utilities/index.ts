@@ -116,6 +116,9 @@ export { concatAST } from './concatAST.ts';
 // Separates an AST into an AST per Operation.
 export { separateOperations } from './separateOperations.ts';
 
+// Prunes variable definitions that are not used by each Operation.
+export { pruneUnusedVariables } from './pruneUnusedVariables.ts';
+
 // Strips characters that are not significant to the validity or execution of a GraphQL document.
 export { stripIgnoredCharacters } from './stripIgnoredCharacters.ts';
 

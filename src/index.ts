@@ -557,6 +557,8 @@ export {
   concatAST,
   // Separates an AST into an AST per Operation.
   separateOperations,
+  // Prunes variable definitions that are not used by each Operation.
+  pruneUnusedVariables,
   // Strips characters that are not significant to the validity or execution of a GraphQL document.
   stripIgnoredCharacters,
   // Comparators for types

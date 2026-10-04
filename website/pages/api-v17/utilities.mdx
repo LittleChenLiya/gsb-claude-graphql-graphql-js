@@ -3967,6 +3967,8 @@ Default: 9</td>
     <span aria-hidden="true">&middot;</span>
     <a href="/api-v17/utilities#separateoperations">separateOperations()</a>
     <span aria-hidden="true">&middot;</span>
+    <a href="/api-v17/utilities#pruneunusedvariables">pruneUnusedVariables()</a>
+    <span aria-hidden="true">&middot;</span>
     <a href="/api-v17/utilities#stripignoredcharacters">stripIgnoredCharacters()</a>
   </p>
 </div>
@@ -4121,6 +4123,117 @@ const separated = separateOperations(document);
 Object.keys(separated); // => ['GetUser', 'GetStatus']
 print(separated.GetUser); // matches /fragment UserFields/
 print(separated.GetStatus); // does not match /fragment UserFields/
+```
+
+<hr className="api-item-divider" />
+
+#### pruneUnusedVariables()
+
+pruneUnusedVariables accepts a single AST document which may contain many
+operations and fragments and returns a new document in which every
+operation keeps only the variable definitions it actually uses.
+
+A variable is considered used when it is referenced anywhere in the
+operation: in field or directive arguments, inside input values, or within
+any fragment reachable from the operation through fragment spreads
+(including spread chains and fragment cycles). The operation itself is
+only rewritten when at least one of its variable definitions is removed;
+shared fragment definitions and selection sets are never modified.
+
+Because this is an offline, syntactic transformation, it does not consult a
+schema, type information, or resolvers to infer runtime behavior. An
+unknown fragment spread is an error rather than treated as using nothing,
+and fragment cycles are traversed in full instead of being silently
+skipped, since skipping either could cause a used variable definition to
+be deleted.
+
+For the retained variable definitions the declaration order as well as the
+type reference, default value, and directives are preserved verbatim.
+
+**Signature:**
+
+<ApiSignature parts={[["name", "pruneUnusedVariables"], "(\n  ", ["parameter", "documentAST"], ": ", ["link", "DocumentNode", "/api-v17/language#documentnode"], ",\n): ", ["link", "DocumentNode", "/api-v17/language#documentnode"], ";"]} />
+
+<hr className="api-subsection-divider" />
+
+<div className="api-subsection-title">Arguments</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>documentAST</td>
+      <td><ApiType parts={[["link", "DocumentNode", "/api-v17/language#documentnode"]]} /></td>
+      <td>The parsed GraphQL document AST.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr className="api-subsection-divider" />
+
+<div className="api-subsection-title">Returns</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><ApiType parts={[["link", "DocumentNode", "/api-v17/language#documentnode"]]} /></td>
+      <td>A new document AST in which each operation only declares the variables it uses.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr className="api-subsection-divider" />
+
+<div className="api-subsection-title">Example</div>
+
+```ts
+import { parse, print } from 'graphql/language';
+import { pruneUnusedVariables } from 'graphql/utilities';
+
+const document = parse(`
+  query GetUser($id: ID!, $unused: String) {
+    user(id: $id) {
+      id
+      ...UserFields
+    }
+  }
+
+  fragment UserFields on User {
+    name
+  }
+
+  query Other($unused: String) {
+    field(arg: $unused)
+  }
+`);
+
+print(pruneUnusedVariables(document));
+// query GetUser($id: ID!) {
+//   user(id: $id) {
+//     id
+//     ...UserFields
+//   }
+// }
+//
+// fragment UserFields on User {
+//   name
+// }
+//
+// query Other($unused: String) {
+//   field(arg: $unused)
+// }
 ```
 
 <hr className="api-item-divider" />
