@@ -28,6 +28,8 @@ import type { GraphQLDirective } from '../type/directives.ts';
 import type { GraphQLSchema } from '../type/schema.ts';
 import { validateDefaultInput } from '../type/validate.ts';
 
+import type { InputFieldAliasUsage } from '../utilities/applyInputFieldAliases.ts';
+import { applyInputFieldAliases } from '../utilities/applyInputFieldAliases.ts';
 import {
   coerceDefaultValue,
   coerceInputLiteral,
@@ -58,6 +60,11 @@ export interface VariableValues {
   readonly sources: ReadOnlyObjMap<VariableValueSource>;
   /** Coerced runtime variable values keyed by variable name. */
   readonly coerced: ReadOnlyObjMap<unknown>;
+  /**
+   * Locations where deprecated input field aliases were used, when alias
+   * handling is enabled. Empty when aliases are disabled.
+   */
+  readonly inputFieldAliasDeprecations?: ReadonlyArray<InputFieldAliasUsage>;
 }
 
 interface VariableValueSource {
@@ -83,6 +90,8 @@ type VariableValuesOrErrors =
  * @param [options.maxErrors] - Maximum number of coercion errors to report.
  * @param [options.hideSuggestions] - Whether suggestion text should be omitted
  * from errors.
+ * @param [options.inputFieldAliases] - Whether to accept deprecated input
+ * field aliases when coercing variables. Defaults to `false`.
  * @returns Coerced variable values with source metadata, or request errors.
  * @example
  * ```ts
@@ -154,7 +163,11 @@ export function getVariableValues(
   schema: GraphQLSchema,
   varDefNodes: ReadonlyArray<VariableDefinitionNode>,
   inputs: { readonly [variable: string]: unknown },
-  options?: { maxErrors?: number; hideSuggestions?: boolean },
+  options?: {
+    maxErrors?: number;
+    hideSuggestions?: boolean;
+    inputFieldAliases?: boolean;
+  },
 ): VariableValuesOrErrors {
   const errors: Array<GraphQLError> = [];
   const maxErrors = options?.maxErrors;
@@ -171,7 +184,10 @@ export function getVariableValues(
         }
         errors.push(error);
       },
-      options?.hideSuggestions,
+      {
+        hideSuggestions: options?.hideSuggestions,
+        inputFieldAliases: options?.inputFieldAliases,
+      },
     );
 
     if (errors.length === 0) {
@@ -189,10 +205,15 @@ function coerceVariableValues(
   varDefNodes: ReadonlyArray<VariableDefinitionNode>,
   inputs: { readonly [variable: string]: unknown },
   onError: (error: GraphQLError) => void,
-  hideSuggestions?: Maybe<boolean>,
+  options: {
+    hideSuggestions?: Maybe<boolean>;
+    inputFieldAliases?: Maybe<boolean>;
+  },
 ): VariableValues {
+  const { hideSuggestions, inputFieldAliases } = options;
   const sources: ObjMap<VariableValueSource> = Object.create(null);
   const coerced: ObjMap<unknown> = Object.create(null);
+  const allDeprecations: Array<InputFieldAliasUsage> = [];
   for (const varDefNode of varDefNodes) {
     const varSignature = getVariableSignature(schema, varDefNode);
 
@@ -202,7 +223,7 @@ function coerceVariableValues(
     }
 
     const { name: varName, type: varType } = varSignature;
-    const value = Object.hasOwn(inputs, varName) ? inputs[varName] : undefined;
+    let value = Object.hasOwn(inputs, varName) ? inputs[varName] : undefined;
     if (value === undefined) {
       sources[varName] = { signature: varSignature };
       if (varDefNode.defaultValue) {
@@ -229,6 +250,30 @@ function coerceVariableValues(
       sources[varName] = { signature: varSignature, value };
     }
 
+    if (inputFieldAliases === true) {
+      try {
+        const aliasResult = applyInputFieldAliases(value, varType);
+        value = aliasResult.value;
+        for (const usage of aliasResult.deprecations) {
+          allDeprecations.push({
+            ...usage,
+            path: [varName, ...usage.path],
+          });
+        }
+      } catch (error) {
+        const graphQLError = ensureGraphQLError(error);
+        onError(
+          new GraphQLError(
+            `Variable "$${varName}" has invalid value${printPathArray(
+              graphQLError.path ?? [],
+            )}: ${graphQLError.message}`,
+            { nodes: varDefNode, originalError: graphQLError },
+          ),
+        );
+        continue;
+      }
+    }
+
     const coercedValue = coerceInputValue(value, varType);
     if (coercedValue !== undefined) {
       coerced[varName] = coercedValue;
@@ -251,7 +296,11 @@ function coerceVariableValues(
     }
   }
 
-  return { sources, coerced };
+  const result: VariableValues = { sources, coerced };
+  if (inputFieldAliases === true) {
+    return { ...result, inputFieldAliasDeprecations: allDeprecations };
+  }
+  return result;
 }
 
 function maybeUseDefaultValue(

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/mocharc.json",
+  "extensions": ["ts"],
+  "spec": ["test-alias-feature.ts", "test-alias-migration-example.ts"],
+  "node-option": ["experimental-strip-types", "experimental-test-isolation=none"],
+  "reporter": "spec",
+  "timeout": 10000,
+  "exit": true
+}

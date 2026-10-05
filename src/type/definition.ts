@@ -5129,6 +5129,14 @@ export interface GraphQLInputFieldConfig {
   default?: GraphQLDefaultInput | undefined;
   /** Reason this element is deprecated, if one was provided. */
   deprecationReason?: Maybe<string>;
+  /**
+   * Legacy external keys that map to this field during input coercion.
+   *
+   * Aliases are only applied when input field aliasing is explicitly enabled
+   * (e.g. via `getVariableValues` with `inputFieldAliases: true`). When both
+   * an alias and the canonical field name are present, coercion is rejected.
+   */
+  aliases?: Maybe<ReadonlyArray<string>>;
   /** Custom extension fields reserved for users. */
   extensions?: Maybe<Readonly<GraphQLInputFieldExtensions>>;
   /** AST node from which this schema element was built, if available. */
@@ -5141,6 +5149,7 @@ export type GraphQLInputFieldConfigMap = ObjMap<GraphQLInputFieldConfig>;
 /** @internal */
 export interface GraphQLInputFieldNormalizedConfig extends GraphQLInputFieldConfig {
   default: GraphQLDefaultInput | undefined;
+  aliases?: Maybe<ReadonlyArray<string>>;
   extensions: Readonly<GraphQLInputFieldExtensions>;
 }
 
@@ -5178,6 +5187,12 @@ export class GraphQLInputField implements GraphQLSchemaElement {
   _memoizedCoercedDefaultValue: unknown;
   /** Reason this element is deprecated, if one was provided. */
   deprecationReason: Maybe<string>;
+  /**
+   * Legacy external keys that map to this field during input coercion.
+   *
+   * Aliases are only applied when input field aliasing is explicitly enabled.
+   */
+  aliases: Maybe<ReadonlyArray<string>>;
   /** Custom extension fields reserved for users. */
   extensions: Readonly<GraphQLInputFieldExtensions>;
   /** AST node from which this schema element was built, if available. */
@@ -5229,6 +5244,7 @@ export class GraphQLInputField implements GraphQLSchemaElement {
     this.default = config.default;
     this._memoizedCoercedDefaultValue = undefined;
     this.deprecationReason = config.deprecationReason;
+    this.aliases = config.aliases;
     this.extensions = toObjMapWithSymbols(config.extensions);
     this.astNode = config.astNode;
   }
@@ -5265,7 +5281,7 @@ export class GraphQLInputField implements GraphQLSchemaElement {
    * ```
    */
   toConfig(): GraphQLInputFieldNormalizedConfig {
-    return {
+    const config: GraphQLInputFieldNormalizedConfig = {
       description: this.description,
       type: this.type,
       defaultValue: this.defaultValue,
@@ -5274,6 +5290,10 @@ export class GraphQLInputField implements GraphQLSchemaElement {
       extensions: this.extensions,
       astNode: this.astNode,
     };
+    if (this.aliases != null) {
+      config.aliases = this.aliases;
+    }
+    return config;
   }
 
   /**

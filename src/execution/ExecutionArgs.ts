@@ -55,6 +55,12 @@ export interface ExecutionArgs {
      * @internal
      */
     maxCoercionErrors?: number;
+    /**
+     * Whether to accept deprecated input field aliases when coercing
+     * variables. Defaults to `false` so the default execution entry point
+     * does not automatically accept old external keys.
+     */
+    inputFieldAliases?: boolean;
   };
 }
 

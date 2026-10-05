@@ -104,6 +104,16 @@ export {
 } from './coerceInputValue.ts';
 
 export {
+  // Applies deprecated input field aliases before coercion.
+  applyInputFieldAliases,
+  printInputFieldAliasUsage,
+} from './applyInputFieldAliases.ts';
+export type {
+  ApplyInputFieldAliasesResult,
+  InputFieldAliasUsage,
+} from './applyInputFieldAliases.ts';
+
+export {
   // Validate a JavaScript value with a GraphQL type, collecting all errors.
   validateInputValue,
   // Validate a GraphQL literal (AST) with a GraphQL type, collecting all errors.
