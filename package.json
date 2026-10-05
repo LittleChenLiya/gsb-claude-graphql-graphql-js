@@ -41,6 +41,9 @@
     "check:ts": "tsc --pretty",
     "check:deno": "npm run build:deno && deno publish --dry-run --allow-dirty --config denoDist/jsr.json",
     "testonly": "npm run node:test -- \"src/**/__tests__/**/*-test.ts\"",
+    "testonly:error-grouper": "npm run node:test -- \"src/error/__tests__/errorGrouper-test.ts\"",
+    "mocha:error-grouper": "node --experimental-strip-types node_modules/mocha/bin/mocha.js src/error/__tests__/errorGrouper.mocha.mjs",
+    "demo:error-grouper": "node --experimental-strip-types resources/error-grouper-demo.ts",
     "testonly:cover": "npm run node:test -- --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-exclude=\"src/**/__tests__/**\" --test-coverage-exclude=\"**/*-test.ts\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"src/**/__tests__/**/*-test.ts\"",
     "testonly:watch": "npm run node:test -- --watch \"src/**/__tests__/**/*-test.ts\"",
     "prettier": "prettier --cache --cache-strategy metadata --write --list-different .",
@@ -70,6 +73,7 @@
     "husky": "9.1.7",
     "lint-staged": "16.2.7",
     "mitata": "1.0.34",
+    "mocha": "12.0.3",
     "prettier": "3.8.1",
     "typescript": "6.0.3",
     "typescript-eslint": "8.59.0"
