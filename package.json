@@ -43,6 +43,7 @@
     "testonly": "npm run node:test -- \"src/**/__tests__/**/*-test.ts\"",
     "testonly:cover": "npm run node:test -- --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-exclude=\"src/**/__tests__/**\" --test-coverage-exclude=\"**/*-test.ts\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"src/**/__tests__/**/*-test.ts\"",
     "testonly:watch": "npm run node:test -- --watch \"src/**/__tests__/**/*-test.ts\"",
+    "test:grouper": "npm run node:test -- \"src/error/__tests__/groupGraphQLErrors-test.ts\"",
     "prettier": "prettier --cache --cache-strategy metadata --write --list-different .",
     "prettier:check": "prettier --cache --cache-strategy metadata --check .",
     "prettier:examples": "node --experimental-strip-types resources/prettier-examples.ts --write",

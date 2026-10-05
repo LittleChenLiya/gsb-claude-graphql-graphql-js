@@ -484,13 +484,24 @@ export {
 export type { ValidationOptions, ValidationRule } from './validation/index.ts';
 
 // Create, format, and print GraphQL errors.
-export { GraphQLError, syntaxError, locatedError } from './error/index.ts';
+export {
+  GraphQLError,
+  syntaxError,
+  locatedError,
+  groupGraphQLErrors,
+  formatGroupedErrors,
+} from './error/index.ts';
 
 export type {
   GraphQLErrorOptions,
   GraphQLFormattedError,
   GraphQLErrorExtensions,
   GraphQLFormattedErrorExtensions,
+  GraphQLErrorGroup,
+  GroupGraphQLErrorsOptions,
+  FormattedGraphQLErrorEvent,
+  FormattedGraphQLErrorGroup,
+  FormatGroupedErrorsOptions,
 } from './error/index.ts';
 
 // Utilities for operating on GraphQL type schema and parsed sources.

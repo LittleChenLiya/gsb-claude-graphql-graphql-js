@@ -16,3 +16,12 @@ export type {
 export { syntaxError } from './syntaxError.ts';
 
 export { locatedError } from './locatedError.ts';
+
+export { groupGraphQLErrors, formatGroupedErrors } from './groupGraphQLErrors.ts';
+export type {
+  GraphQLErrorGroup,
+  GroupGraphQLErrorsOptions,
+  FormattedGraphQLErrorEvent,
+  FormattedGraphQLErrorGroup,
+  FormatGroupedErrorsOptions,
+} from './groupGraphQLErrors.ts';
