@@ -744,6 +744,7 @@ export function validateExecutionArgs(
     abortSignal: externalAbortSignal,
     enableEarlyExecution,
     hooks,
+    nullBubblingDiagnostics,
     options,
   } = args;
 
@@ -867,6 +868,7 @@ export function validateExecutionArgs(
     externalAbortSignal: externalAbortSignal ?? undefined,
     enableEarlyExecution: enableEarlyExecution === true,
     hooks: hooks ?? undefined,
+    nullBubblingDiagnostics: nullBubblingDiagnostics === true,
     rawVariableValues,
   };
 }

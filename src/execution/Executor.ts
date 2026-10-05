@@ -175,6 +175,41 @@ class CollectedErrors {
 }
 
 /**
+ * A single position that was set to null while a non-null field error
+ * propagated towards the nearest nullable position.
+ */
+export interface NullBubblingPosition {
+  /** Response path (using response aliases) of the nulled position. */
+  path: ReadonlyArray<string | number>;
+  /**
+   * Wrapper type at the nulled position, e.g. `"String!"`, `"User!"` or
+   * `"[User!]!"`; `"data"` for the operation root.
+   */
+  type: string;
+  /** The kind of position that was nulled. */
+  kind: 'field' | 'listItem' | 'root';
+}
+
+/**
+ * Diagnostic describing how one non-null field failure nulled its ancestor
+ * positions. Recorded under `extensions.nullBubbling` when the
+ * `nullBubblingDiagnostics` execution argument is enabled. The original
+ * `data` and `errors` (including each error's `path`) are unaffected.
+ */
+export interface NullBubblingDiagnostic {
+  /**
+   * Response path of the triggering failure, matching the `path` of the
+   * corresponding entry in `errors`.
+   */
+  path: ReadonlyArray<string | number>;
+  /**
+   * Ordered propagation chain of nulled positions, from the failure site up
+   * to (and including) the first nullable position, where propagation stopped.
+   */
+  propagation: ReadonlyArray<NullBubblingPosition>;
+}
+
+/**
  * Represents the response produced by executing a GraphQL operation.
  * @typeParam TData - Shape of the execution data payload.
  * @typeParam TExtensions - Shape of the extensions payload.
@@ -220,6 +255,10 @@ export class Executor<
   abortReason: unknown;
   sharedExecutionContext: SharedExecutionContext;
   collectedErrors: CollectedErrors;
+  nullBubblingDiagnostics: Array<NullBubblingDiagnostic> | undefined;
+  pendingNullBubblingChains:
+    | Map<GraphQLError, Array<NullBubblingPosition>>
+    | undefined;
   abortResultPromise: (() => void) | undefined;
   resolverAbortController: AbortController | undefined;
   getAbortSignal: () => AbortSignal | undefined;
@@ -236,6 +275,11 @@ export class Executor<
     this.aborted = false;
     this.abortReason = defaultAbortReason;
     this.collectedErrors = new CollectedErrors();
+
+    if (validatedExecutionArgs.nullBubblingDiagnostics) {
+      this.nullBubblingDiagnostics = [];
+      this.pendingNullBubblingChains = new Map();
+    }
 
     if (sharedExecutionContext === undefined) {
       this.resolverAbortController = new AbortController();
@@ -349,7 +393,7 @@ export class Executor<
           },
           (error: unknown) => {
             maybeRemoveExternalAbortListener();
-            this.collectedErrors.add(ensureGraphQLError(error), undefined);
+            this.collectRootError(error);
             return this.buildResponse(null);
           },
         );
@@ -367,10 +411,21 @@ export class Executor<
       maybeRemoveExternalAbortListener();
     } catch (error) {
       maybeRemoveExternalAbortListener();
-      this.collectedErrors.add(ensureGraphQLError(error), undefined);
+      this.collectRootError(error);
       return this.finish(this.buildResponse(null));
     }
     return this.finish(this.buildResponse(result));
+  }
+
+  /**
+   * Collect an error that nullified the entire response data, completing any
+   * in-flight null-bubbling diagnostic chain at the operation root.
+   * @internal
+   */
+  collectRootError(error: unknown): void {
+    const graphQLError = ensureGraphQLError(error);
+    this.recordNullBubblingStop(graphQLError, undefined, undefined);
+    this.collectedErrors.add(graphQLError, undefined);
   }
 
   abort(reason?: unknown): void {
@@ -430,7 +485,15 @@ export class Executor<
   ): ExecutionResult | TAlternativeInitialResponse {
     this.getFinishSharedExecution()();
     const errors = this.collectedErrors.errors;
-    return errors.length ? { errors, data } : { data };
+    const result: ExecutionResult = errors.length ? { errors, data } : { data };
+    const nullBubblingDiagnostics = this.nullBubblingDiagnostics;
+    if (
+      nullBubblingDiagnostics !== undefined &&
+      nullBubblingDiagnostics.length > 0
+    ) {
+      result.extensions = { nullBubbling: nullBubblingDiagnostics };
+    }
+    return result;
   }
 
   executeCollectedRootFields(
@@ -731,12 +794,82 @@ export class Executor<
       this.validatedExecutionArgs.errorPropagation &&
       isNonNullType(returnType)
     ) {
+      this.recordNullBubblingHop(error, path, returnType);
       throw error;
     }
 
     // Otherwise, error protection is applied, logging the error and resolving
     // a null value for this field if one is encountered.
+    this.recordNullBubblingStop(error, path, returnType);
     this.collectedErrors.add(error, path);
+  }
+
+  /**
+   * Record one hop of an in-flight non-null propagation: the error is being
+   * re-thrown past a non-null position, which is thereby nulled.
+   * @internal
+   */
+  recordNullBubblingHop(
+    error: GraphQLError,
+    path: Path,
+    returnType: GraphQLOutputType,
+  ): void {
+    const pending = this.pendingNullBubblingChains;
+    if (pending === undefined) {
+      return;
+    }
+    const position: NullBubblingPosition = {
+      path: pathToArray(path),
+      type: String(returnType),
+      kind: typeof path.key === 'number' ? 'listItem' : 'field',
+    };
+    const chain = pending.get(error);
+    if (chain === undefined) {
+      pending.set(error, [position]);
+    } else {
+      chain.push(position);
+    }
+  }
+
+  /**
+   * Record the nullable position at which an in-flight non-null propagation
+   * stopped, completing the diagnostic chain for the given error. Errors
+   * dropped because an ancestor position was already nulled do not produce a
+   * diagnostic.
+   * @internal
+   */
+  recordNullBubblingStop(
+    error: GraphQLError,
+    path: Path | undefined,
+    returnType: GraphQLOutputType | undefined,
+  ): void {
+    const pending = this.pendingNullBubblingChains;
+    if (pending === undefined) {
+      return;
+    }
+    const chain = pending.get(error);
+    if (chain === undefined) {
+      return;
+    }
+    pending.delete(error);
+    if (this.collectedErrors.hasNulledPosition(path)) {
+      return;
+    }
+    chain.push({
+      path: path === undefined ? [] : pathToArray(path),
+      type: returnType === undefined ? 'data' : String(returnType),
+      kind:
+        path === undefined
+          ? 'root'
+          : typeof path.key === 'number'
+            ? 'listItem'
+            : 'field',
+    });
+    const [failurePosition] = chain;
+    this.nullBubblingDiagnostics?.push({
+      path: failurePosition.path,
+      propagation: chain,
+    });
   }
 
   /**

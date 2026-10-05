@@ -400,6 +400,8 @@ export type {
   ValidatedExecutionArgs,
   ValidatedSubscriptionArgs,
   ExecutionResult,
+  NullBubblingDiagnostic,
+  NullBubblingPosition,
   ExperimentalIncrementalExecutionResults,
   InitialIncrementalExecutionResult,
   SubsequentIncrementalExecutionResult,

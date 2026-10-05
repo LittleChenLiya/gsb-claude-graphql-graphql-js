@@ -35,7 +35,12 @@ export type {
 } from './ExecutionArgs.ts';
 export type { RootSelectionSetExecutor } from './execute.ts';
 
-export type { ExecutionResult, FormattedExecutionResult } from './Executor.ts';
+export type {
+  ExecutionResult,
+  FormattedExecutionResult,
+  NullBubblingDiagnostic,
+  NullBubblingPosition,
+} from './Executor.ts';
 
 export type {
   ExperimentalIncrementalExecutionResults,

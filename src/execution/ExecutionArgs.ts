@@ -47,6 +47,14 @@ export interface ExecutionArgs {
   enableEarlyExecution?: Maybe<boolean>;
   /** Execution hooks invoked during this operation. */
   hooks?: Maybe<ExecutionHooks>;
+  /**
+   * Whether to record null-bubbling diagnostics: for each non-null field
+   * failure, the chain of parent positions (fields, list items, up to the
+   * operation root) that were nulled while the error propagated to the
+   * nearest nullable position. Recorded under `extensions.nullBubbling`
+   * without altering `data` or `errors`.
+   */
+  nullBubblingDiagnostics?: Maybe<boolean>;
   /** Additional execution options. */
   options?: {
     /**
@@ -102,6 +110,8 @@ export interface ValidatedExecutionArgs {
   enableEarlyExecution: boolean;
   /** Execution hooks supplied by the caller. */
   hooks: ExecutionHooks | undefined;
+  /** Whether null-bubbling diagnostics are recorded for this operation. */
+  nullBubblingDiagnostics: boolean;
 }
 
 /** Validated execution arguments for a subscription operation. */
