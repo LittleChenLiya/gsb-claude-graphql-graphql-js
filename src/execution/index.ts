@@ -74,4 +74,8 @@ export {
   getVariableValues,
   getDirectiveValues,
 } from './values.ts';
-export type { VariableValues } from './values.ts';
+export type { GetVariableValuesOptions, VariableValues } from './values.ts';
+export type {
+  InputFieldAliasDeprecation,
+  InputFieldAliasRule,
+} from './inputFieldAliases.ts';

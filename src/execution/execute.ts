@@ -813,6 +813,9 @@ export function validateExecutionArgs(
   const coercionOptions = {
     maxErrors: options?.maxCoercionErrors ?? 50,
     hideSuggestions,
+    inputFieldAliases: args.inputFieldAliases ?? undefined,
+    onInputFieldAliasDeprecation:
+      args.onInputFieldAliasDeprecation ?? undefined,
   };
   const coercionChannel = executeVariableCoercionChannel;
   const variableValuesOrErrors = shouldTrace(coercionChannel)

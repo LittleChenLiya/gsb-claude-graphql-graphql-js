@@ -44,6 +44,14 @@ import type {
 } from './collectFields.ts';
 import type { GraphQLVariableSignature } from './getVariableSignature.ts';
 import { getVariableSignature } from './getVariableSignature.ts';
+import type {
+  InputFieldAliasDeprecation,
+  InputFieldAliasRule,
+} from './inputFieldAliases.ts';
+import {
+  applyInputFieldAliases,
+  groupInputFieldAliasRules,
+} from './inputFieldAliases.ts';
 
 /**
  * Coerced variable values prepared for execution.
@@ -65,6 +73,27 @@ interface VariableValueSource {
   readonly value?: unknown;
 }
 
+/** Options accepted by getVariableValues. */
+export interface GetVariableValuesOptions {
+  /** Maximum number of coercion errors to report. */
+  maxErrors?: number;
+  /** Whether suggestion text should be omitted from errors. */
+  hideSuggestions?: boolean;
+  /**
+   * Explicit migration rules mapping deprecated external input object keys
+   * onto schema fields. Rules are applied to variable values before coercion;
+   * without rules, deprecated keys are rejected as unknown fields.
+   */
+  inputFieldAliases?: ReadonlyArray<InputFieldAliasRule> | undefined;
+  /**
+   * Callback recording each use of a deprecated input field alias, including
+   * the location of the deprecated key within the variable value.
+   */
+  onInputFieldAliasDeprecation?:
+    | ((deprecation: InputFieldAliasDeprecation) => void)
+    | undefined;
+}
+
 type VariableValuesOrErrors =
   | { variableValues: VariableValues; errors?: never }
   | { errors: ReadonlyArray<GraphQLError>; variableValues?: never };
@@ -83,6 +112,11 @@ type VariableValuesOrErrors =
  * @param [options.maxErrors] - Maximum number of coercion errors to report.
  * @param [options.hideSuggestions] - Whether suggestion text should be omitted
  * from errors.
+ * @param [options.inputFieldAliases] - Explicit migration rules mapping
+ * deprecated external input object keys onto schema fields, applied before
+ * coercion. Deprecated keys are rejected as unknown fields without rules.
+ * @param [options.onInputFieldAliasDeprecation] - Callback recording each use
+ * of a deprecated input field alias, including its location.
  * @returns Coerced variable values with source metadata, or request errors.
  * @example
  * ```ts
@@ -154,7 +188,7 @@ export function getVariableValues(
   schema: GraphQLSchema,
   varDefNodes: ReadonlyArray<VariableDefinitionNode>,
   inputs: { readonly [variable: string]: unknown },
-  options?: { maxErrors?: number; hideSuggestions?: boolean },
+  options?: GetVariableValuesOptions,
 ): VariableValuesOrErrors {
   const errors: Array<GraphQLError> = [];
   const maxErrors = options?.maxErrors;
@@ -171,7 +205,7 @@ export function getVariableValues(
         }
         errors.push(error);
       },
-      options?.hideSuggestions,
+      options,
     );
 
     if (errors.length === 0) {
@@ -189,8 +223,13 @@ function coerceVariableValues(
   varDefNodes: ReadonlyArray<VariableDefinitionNode>,
   inputs: { readonly [variable: string]: unknown },
   onError: (error: GraphQLError) => void,
-  hideSuggestions?: Maybe<boolean>,
+  options?: GetVariableValuesOptions,
 ): VariableValues {
+  const hideSuggestions = options?.hideSuggestions;
+  const aliasRulesByType =
+    options?.inputFieldAliases == null
+      ? undefined
+      : groupInputFieldAliasRules(options.inputFieldAliases);
   const sources: ObjMap<VariableValueSource> = Object.create(null);
   const coerced: ObjMap<unknown> = Object.create(null);
   for (const varDefNode of varDefNodes) {
@@ -229,12 +268,40 @@ function coerceVariableValues(
       sources[varName] = { signature: varSignature, value };
     }
 
-    const coercedValue = coerceInputValue(value, varType);
+    // Remap deprecated external keys onto schema fields before coercion.
+    // The transformation copies lazily, so the caller's variables are never
+    // mutated, even when coercion later fails.
+    let coercibleValue = value;
+    if (value !== undefined && aliasRulesByType !== undefined) {
+      coercibleValue = applyInputFieldAliases(
+        value,
+        varType,
+        aliasRulesByType,
+        [],
+        {
+          onDeprecation: (path, rule) =>
+            options?.onInputFieldAliasDeprecation?.({
+              variableName: varName,
+              path,
+              rule,
+            }),
+          onConflict: (path, rule) =>
+            onError(
+              new GraphQLError(
+                `Variable "$${varName}" must not provide both deprecated input field alias "${rule.alias}" and field "${rule.field}" of input object type "${rule.typeName}"${printPathArray(path)}.`,
+                { nodes: varDefNode },
+              ),
+            ),
+        },
+      );
+    }
+
+    const coercedValue = coerceInputValue(coercibleValue, varType);
     if (coercedValue !== undefined) {
       coerced[varName] = coercedValue;
     } else {
       validateInputValue(
-        value,
+        coercibleValue,
         varType,
         (error, path) => {
           onError(

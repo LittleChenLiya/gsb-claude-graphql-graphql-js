@@ -17,6 +17,10 @@ import type {
 import type { GraphQLSchema } from '../type/schema.ts';
 
 import type { FragmentDetails } from './collectFields.ts';
+import type {
+  InputFieldAliasDeprecation,
+  InputFieldAliasRule,
+} from './inputFieldAliases.ts';
 import type { VariableValues } from './values.ts';
 
 /** Arguments accepted by execute and executeSync. */
@@ -31,6 +35,20 @@ export interface ExecutionArgs {
   contextValue?: unknown;
   /** Runtime variable values keyed by variable name. */
   variableValues?: Maybe<{ readonly [variable: string]: unknown }>;
+  /**
+   * Explicit migration rules mapping deprecated external input object keys
+   * onto schema fields, applied to variable values before coercion. By
+   * default no aliases are accepted: deprecated keys are rejected as unknown
+   * fields.
+   */
+  inputFieldAliases?: Maybe<ReadonlyArray<InputFieldAliasRule>>;
+  /**
+   * Callback recording each use of a deprecated input field alias, including
+   * the location of the deprecated key within the variable value.
+   */
+  onInputFieldAliasDeprecation?: Maybe<
+    (deprecation: InputFieldAliasDeprecation) => void
+  >;
   /** Name of the operation to execute when the document contains multiple operations. */
   operationName?: Maybe<string>;
   /** Resolver used when a field does not define its own resolver. */
