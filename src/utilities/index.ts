@@ -110,6 +110,16 @@ export {
   validateInputLiteral,
 } from './validateInputValue.ts';
 
+// Produce a masked summary of coerced operation variable values.
+export { MASKED_VALUE, summarizeVariables } from './summarizeVariables.ts';
+export type {
+  SafeVariableError,
+  SummarizeVariablesOptions,
+  VariableSummary,
+  VariableSummaryEntry,
+  VariableSummaryResult,
+} from './summarizeVariables.ts';
+
 // Concatenates multiple AST together.
 export { concatAST } from './concatAST.ts';
 
