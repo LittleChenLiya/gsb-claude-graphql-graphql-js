@@ -93,6 +93,9 @@ export { TypeInfo, visitWithTypeInfo } from './TypeInfo.ts';
 // Converts a value to a const value by replacing variables.
 export { replaceVariables } from './replaceVariables.ts';
 
+// Produces a new document with the provided variable values inlined as literals.
+export { inlineVariableValues } from './inlineVariableValues.ts';
+
 // Create a GraphQL literal (AST) from a JavaScript input value.
 export { valueToLiteral } from './valueToLiteral.ts';
 

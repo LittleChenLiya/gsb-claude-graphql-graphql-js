@@ -543,6 +543,8 @@ export {
   visitWithTypeInfo,
   // Converts a value to a const value by replacing variables.
   replaceVariables,
+  // Produces a new document with the provided variable values inlined as literals.
+  inlineVariableValues,
   // Create a GraphQL literal (AST) from a JavaScript input value.
   valueToLiteral,
   // Coerces a JavaScript value to a GraphQL type, or returns undefined.
