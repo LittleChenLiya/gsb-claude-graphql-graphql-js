@@ -60,6 +60,7 @@ const meta = {
   'using-directives': '',
   'directives-on-directives': '',
   'authorization-strategies': '',
+  'masking-sensitive-variables': '',
   '-- 6': {
     type: 'separator',
     title: 'Testing',

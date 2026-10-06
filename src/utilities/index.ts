@@ -110,6 +110,22 @@ export {
   validateInputLiteral,
 } from './validateInputValue.ts';
 
+// Summarize operation variables with sensitive values masked.
+export {
+  summarizeVariables,
+  VARIABLE_SUMMARY_REDACTED,
+  SENSITIVE_PATH_WILDCARD,
+} from './summarizeVariables.ts';
+export type {
+  SensitivePath,
+  SensitivePathSegment,
+  SummarizeVariablesOptions,
+  SummarizeVariablesResult,
+  VariableSummary,
+  VariableSummaryEntry,
+  VariableSummaryStatus,
+} from './summarizeVariables.ts';
+
 // Concatenates multiple AST together.
 export { concatAST } from './concatAST.ts';
 

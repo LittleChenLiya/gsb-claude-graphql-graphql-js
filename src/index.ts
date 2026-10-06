@@ -553,6 +553,10 @@ export {
   validateInputValue,
   // Validate a GraphQL literal (AST) with a GraphQL type, collecting all errors.
   validateInputLiteral,
+  // Summarize operation variables with sensitive values masked.
+  summarizeVariables,
+  VARIABLE_SUMMARY_REDACTED,
+  SENSITIVE_PATH_WILDCARD,
   // Concatenates multiple AST together.
   concatAST,
   // Separates an AST into an AST per Operation.
@@ -604,4 +608,11 @@ export type {
   SchemaChange,
   TypedQueryDocumentNode,
   ResolvedSchemaElement,
+  SensitivePath,
+  SensitivePathSegment,
+  SummarizeVariablesOptions,
+  SummarizeVariablesResult,
+  VariableSummary,
+  VariableSummaryEntry,
+  VariableSummaryStatus,
 } from './utilities/index.ts';

@@ -1,0 +1,110 @@
+---
+title: Masking Sensitive Variables
+---
+
+# Masking Sensitive Variables
+
+Servers often need to log or trace the variables of an incoming operation for
+debugging and auditing. Raw variable values can contain credentials, tokens, or
+other personal data that must never end up in logs or error reports.
+
+The `summarizeVariables` utility produces a safe summary of an operation's
+variable values. It coerces the provided variables with the same rules used by
+execution, then masks the values at declared sensitive field paths. No
+resolvers are executed.
+
+## Declaring sensitive paths
+
+Sensitive paths are rooted at a variable name and address values within that
+variable's coerced value. Use `[]` or `*` to apply a path to every element of
+a list, or a numeric segment to address a single list index:
+
+```ts
+const options = {
+  sensitivePaths: [
+    'input.password', // a single field
+    'users[].password', // a field within every list element
+    'users.0.password', // a field within the first list element only
+    'sessionToken', // a whole scalar variable
+  ],
+};
+```
+
+## Producing a summary
+
+```ts
+import { parse } from 'graphql/language';
+import { getOperationAST } from 'graphql/utilities';
+import { summarizeVariables } from 'graphql/utilities';
+
+const document = parse(`
+  query ($users: [UserInput], $input: UserInput = { password: "s3cr3t" }) {
+    users(users: $users, input: $input)
+  }
+`);
+const operation = getOperationAST(document);
+
+const result = summarizeVariables(
+  schema,
+  operation,
+  {
+    users: [
+      { name: 'Ada', password: 'pw-1' },
+      { name: 'Grace', password: null },
+    ],
+  },
+  { sensitivePaths: ['users[].password', 'input.password'] },
+);
+
+if ('summary' in result) {
+  console.log(result.summary);
+  // {
+  //   users: {
+  //     status: 'provided',
+  //     value: [
+  //       { name: 'Ada', password: '[REDACTED]' },
+  //       { name: 'Grace', password: null },
+  //     ],
+  //   },
+  //   input: { status: 'default', value: { password: '[REDACTED]' } },
+  // }
+}
+```
+
+The summary preserves object structure and list lengths. Each entry records
+how the effective value was determined:
+
+- `provided`: the request supplied a value (explicit `null` is kept as `null`).
+- `default`: the value comes from the variable's default, which is masked by
+  the same rules.
+- `notProvided`: the variable was not supplied and has no default; the entry
+  has no `value`.
+
+The input `variables` object is never mutated, and variable defaults that are
+memoized on the schema are left untouched.
+
+## Safe failure diagnostics
+
+When coercion fails, `summarizeVariables` returns sanitized errors instead of
+a summary. Error messages are scrubbed so that values at the declared
+sensitive paths—including values originating from variable defaults—are
+replaced by the redaction marker instead of leaking raw sensitive values:
+
+```ts
+const result = summarizeVariables(
+  schema,
+  operation,
+  { input: { password: 'hunter2', bogus: true } },
+  { sensitivePaths: ['input.password'] },
+);
+
+if ('errors' in result) {
+  console.log(result.errors[0].message);
+  // Variable "$input" has invalid value: Expected value of type "UserInput"
+  // not to include unknown field "bogus", found: { password: "[REDACTED]", bogus: true }.
+}
+```
+
+Use the `redactedMarker` option to customize the `[REDACTED]` marker, and pass
+sensitive paths as segment arrays (for example
+`['users', '*', 'password']`) when field names contain dots.
